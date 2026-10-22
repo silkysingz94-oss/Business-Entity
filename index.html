@@ -1,0 +1,954 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>GBoS GEOAI | Advanced Business Entity Explorer</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+<style>
+:root{
+ --navy:#102c50;--blue:#1769aa;--green:#008751;--red:#c62838;
+ --gold:#e4aa23;--bg:#edf2f7;--border:#d8e1ec;--text:#263548;
+ --muted:#697b91;--panel:#fff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;font-family:Arial,Helvetica,sans-serif;color:var(--text)}
+body{font-size:13px;background:var(--bg);overflow:hidden}
+button,input,select,textarea{font:inherit}
+button{border:0;border-radius:6px;background:var(--blue);color:#fff;padding:9px 10px;cursor:pointer;font-weight:700}
+button:hover{filter:brightness(.94)}
+button.secondary{background:#e8eff7;color:var(--navy)}
+button.green{background:var(--green)}
+button.danger{background:#b42332}
+button:disabled{opacity:.45;cursor:not-allowed}
+input,select,textarea{width:100%;min-width:0;padding:8px;border:1px solid var(--border);border-radius:6px;background:#fff;color:var(--text)}
+input[type=checkbox],input[type=radio]{width:auto}
+input[type=range]{padding:0}
+label{display:block;font-weight:700;margin:9px 0 5px}
+small,.muted{color:var(--muted);line-height:1.5}
+header{
+ height:76px;background:linear-gradient(110deg,#102c50,#175587);
+ color:#fff;display:flex;align-items:center;justify-content:space-between;
+ gap:14px;padding:10px 16px;overflow:hidden
+}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.brand h1{font-size:19px;margin:0 0 5px}
+.brand p{margin:0;color:#dce9f6;font-size:11px}
+.flag{width:47px;height:31px;flex:0 0 47px;display:flex;flex-direction:column;border:1px solid #ffffff66}
+.flag span{flex:1}
+.flag .r{background:#ce1126}.flag .w{background:white;border-top:2px solid white;border-bottom:2px solid white}
+.flag .b{background:#0c1c8c}.flag .g{background:#3a7728}
+.header-meta{text-align:right;font-size:11px;line-height:1.7;white-space:nowrap}
+main{
+ height:calc(100dvh - 124px);min-height:0;overflow:hidden;padding:8px;
+ display:grid;grid-template-columns:minmax(265px,1fr) minmax(360px,1.35fr) minmax(325px,1.15fr);gap:8px
+}
+.panel{min-width:0;min-height:0;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--border);border-radius:9px;overflow:hidden}
+.panel-head{flex:0 0 auto;display:flex;align-items:center;justify-content:space-between;gap:7px;padding:11px;border-bottom:1px solid var(--border);background:#fbfcfe}
+.panel-head h2{font-size:14px;color:var(--navy);margin:0}
+.pill{font-size:10px;padding:4px 7px;border-radius:20px;background:#e9f3ff;color:#15558a;white-space:nowrap}
+.panel-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#aebfd2 #f3f6fa}
+.panel-scroll::-webkit-scrollbar{width:8px}
+.panel-scroll::-webkit-scrollbar-thumb{background:#b9c9da;border-radius:8px}
+.panel-body{padding:11px}
+.section{padding-bottom:13px;margin-bottom:13px;border-bottom:1px solid #e8eef4}
+.section:last-child{border-bottom:0}
+.section-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:6px}
+.row{display:flex;gap:7px;align-items:center}
+.row>*{flex:1;min-width:0}
+.btn-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:8px}
+.drop{padding:11px 7px;border:2px dashed #b9c9dc;background:#f7faff;border-radius:8px;text-align:center}
+.drop.drag{background:#eaf4ff;border-color:var(--blue)}
+.drop input{margin-top:7px}
+.alert{padding:9px;border-radius:6px;background:#eef6ff;color:#174e7b;line-height:1.5;overflow-wrap:anywhere;margin:7px 0}
+.alert.ok{background:#eaf8ef;color:#17663a}
+.alert.error{background:#fff0f0;color:#a21e2d}
+.checkline{display:flex;align-items:center;gap:7px;font-weight:400;margin:7px 0}
+.checkline input{flex:0 0 auto}
+.map-panel{position:relative}
+.map-toolbar{flex:0 0 auto;display:flex;gap:5px;flex-wrap:wrap;padding:7px;border-bottom:1px solid var(--border)}
+.map-toolbar button{padding:7px 8px}
+.map-toolbar select{width:auto;flex:1;min-width:105px;padding:7px}
+#map{flex:1 1 auto;min-height:100px;width:100%;background:#e8eef3}
+.legend{flex:0 0 auto;background:#fff;border-top:1px solid var(--border);padding:8px 10px;font-size:11px}
+.legend-title{font-weight:700;color:var(--navy)}
+.legend-swatches{display:flex;flex-wrap:wrap;gap:9px;margin-top:6px}
+.swatch{display:flex;align-items:center;gap:4px}
+.swatch i{width:11px;height:11px;border-radius:3px;border:1px solid #65778a;display:inline-block}
+.legend-bar{height:9px;margin:6px 0 4px;border-radius:5px}
+.legend-labels{display:flex;justify-content:space-between;color:var(--muted)}
+.legend-note{margin-top:4px;color:var(--muted)}
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+.kpi{border:1px solid #e1eaf3;background:#f6f9fc;padding:9px;border-radius:7px;min-width:0}
+.kpi .caption{font-size:10px;line-height:1.4;color:var(--muted)}
+.kpi .num{font-size:19px;font-weight:700;color:var(--navy);margin-top:4px;overflow-wrap:anywhere}
+.kpi .sub{font-size:10px;color:var(--muted);margin-top:3px}
+.analytics-section{border-bottom:1px solid #e6ecf3;padding-bottom:13px;margin-bottom:13px}
+.analytics-section:last-child{border:0}
+.chart-wrap{position:relative;height:235px;margin-top:9px}
+.chart-wrap.large{height:280px}
+.chart-wrap.small{height:190px}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.chart-grid .chart-wrap{height:205px}
+.table-wrap{width:100%;max-height:300px;overflow:auto;border:1px solid var(--border);border-radius:6px}
+table{width:100%;border-collapse:collapse;font-size:11px}
+td,th{text-align:left;padding:7px;border-bottom:1px solid #e7edf4;white-space:nowrap;vertical-align:top}
+th{position:sticky;top:0;background:#f1f5f9;color:#233e5a;z-index:2}
+tbody tr:nth-child(even){background:#fafcff}
+.progress{width:65px;height:6px;background:#e4ebf3;border-radius:5px;overflow:hidden;margin-top:3px}
+.progress span{display:block;height:100%;background:var(--blue)}
+#widgetFrame{width:100%;height:280px;border:1px solid var(--border);border-radius:6px;background:#f6f9fc}
+#busy{display:none;color:var(--blue);font-weight:700;margin:8px 0}
+footer{height:48px;background:#102c50;color:#dce7f3;display:flex;align-items:center;justify-content:center;text-align:center;padding:5px 10px;font-size:11px;line-height:1.5}
+footer strong{color:#fff}
+@media(max-width:1100px){
+ body{overflow:auto}
+ header{height:auto;min-height:76px}
+ main{height:auto;min-height:calc(100vh - 124px);overflow:visible;grid-template-columns:minmax(250px,1fr) minmax(300px,1.2fr)}
+ .panel-scroll{overflow:visible}
+ .map-panel{grid-column:1/-1;grid-row:1;height:68vh;min-height:430px}
+ footer{height:auto;min-height:48px}
+}
+@media(max-width:700px){
+ header{align-items:flex-start}.brand h1{font-size:15px}.header-meta{display:none}
+ main{grid-template-columns:1fr;padding:5px}
+ .map-panel{grid-column:auto;grid-row:auto;height:60vh;min-height:390px}
+ .panel-scroll{overflow:visible}
+ .chart-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+
+<body>
+<header>
+  <div class="brand">
+    <div class="flag" title="The Gambia flag"><span class="r"></span><span class="w"></span><span class="b"></span><span class="w"></span><span class="g"></span></div>
+    <div>
+      <h1>SILKYGEO GEOAI | ADVANCED BUSINESS ENTITY EXPLORER</h1>
+      <p>Interactive geospatial intelligence · Comparative statistics · Data quality</p>
+    </div>
+  </div>
+  <div class="header-meta">THE GAMBIA · GEOAI DASHBOARD<br>Mapping · Analysis · Reporting · 2026</div>
+</header>
+
+<main>
+<!-- LEFT CONTROLS -->
+<section class="panel">
+  <div class="panel-head"><h2>1. Controls &amp; Data</h2><span class="pill">Inputs</span></div>
+  <div class="panel-scroll"><div class="panel-body">
+
+    <div class="section">
+      <div class="section-title">Load CSV attributes</div>
+      <div class="drop" id="csvDrop">
+        <strong>Choose or drop CSV</strong><br><small>Header row required</small>
+        <input id="csvFile" type="file" accept=".csv,.txt,text/csv">
+      </div>
+      <div id="csvName" class="muted">No CSV loaded</div><div id="csvInfo" class="muted"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Load spatial GeoJSON</div>
+      <div class="drop" id="geoDrop">
+        <strong>Choose or drop GeoJSON</strong><br><small>Point, line or polygon features</small>
+        <input id="geoFile" type="file" accept=".geojson,.json,application/json">
+      </div>
+      <div id="geoName" class="muted">No GeoJSON loaded</div><div id="geoInfo" class="muted"></div>
+      <label for="joinCsv">CSV join field</label><select id="joinCsv"><option value="">Load CSV first</option></select>
+      <label for="joinGeo">GeoJSON join field</label><select id="joinGeo"><option value="">Load GeoJSON first</option></select>
+      <button id="joinBtn" class="green" style="width:100%;margin-top:8px">Join attributes</button>
+      <small>Use identifiers with matching values. Existing GeoJSON attributes are preserved.</small>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Administrative filters</div>
+      <label for="lga">LGA / Region</label><select id="lga"><option value="">All</option></select>
+      <label for="district">District</label><select id="district"><option value="">All</option></select>
+      <label for="ward">Ward</label><select id="ward"><option value="">All</option></select>
+      <label for="search">Search attributes</label><input id="search" placeholder="Search name, code, ward...">
+      <div class="btn-grid"><button id="applyBtn">Apply filters</button><button id="resetBtn" class="secondary">Reset filters</button></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Map colour and legend</div>
+      <label for="mapMode">Map colouring mode</label>
+      <select id="mapMode"><option value="numeric">Numeric choropleth</option><option value="category">Categorical colours</option><option value="single">Single colour</option></select>
+      <label for="colorField">Map attribute</label><select id="colorField"><option value="">Select field</option></select>
+      <label for="palette">Colour palette</label>
+      <select id="palette">
+        <option value="warm">Warm sequential</option><option value="blue">Blue sequential</option>
+        <option value="green">Green sequential</option><option value="purple">Purple sequential</option>
+        <option value="viridis">Viridis-inspired</option><option value="diverging">Blue–white–red</option>
+        <option value="traffic">Red–yellow–green</option><option value="mono">Monochrome</option>
+      </select>
+      <label for="singleColor">Single colour</label><input id="singleColor" type="color" value="#1769aa">
+      <label for="pointRadius">Point size</label><input id="pointRadius" type="range" min="3" max="15" value="6">
+      <label for="opacity">Polygon opacity</label><input id="opacity" type="range" min="10" max="95" value="60">
+      <label class="checkline"><input id="showLabels" type="checkbox"> Show labels</label>
+      <label class="checkline"><input id="togglePoints" type="checkbox" checked> Show point features</label>
+      <label class="checkline"><input id="toggleLines" type="checkbox" checked> Show line features</label>
+      <label class="checkline"><input id="togglePolygons" type="checkbox" checked> Show polygon features</label>
+      <div class="btn-grid"><button id="zoomBtn">Zoom to selection</button><button id="clearHighlight" class="secondary">Clear highlight</button></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Statistical variables</div>
+      <label for="metricField">Primary numeric measure</label><select id="metricField"><option value="">Select measure</option></select>
+      <label for="compareField">Comparison measure</label><select id="compareField"><option value="">Optional second measure</option></select>
+      <label for="groupField">Group by</label><select id="groupField"><option value="">Select group field</option></select>
+      <label for="metric">Aggregation</label>
+      <select id="metric"><option value="count">Record count</option><option value="sum">Sum</option><option value="mean">Mean</option><option value="median">Median</option><option value="min">Minimum</option><option value="max">Maximum</option></select>
+      <label for="topN">Maximum chart categories</label><select id="topN"><option>10</option><option>15</option><option>25</option><option>50</option></select>
+      <label for="chartType">Main chart type</label>
+      <select id="chartType"><option value="bar">Bar</option><option value="line">Line</option><option value="pie">Pie</option><option value="doughnut">Doughnut</option><option value="polarArea">Polar area</option></select>
+      <label class="checkline"><input id="normalizeCompare" type="checkbox"> Normalize comparison to index (first group = 100)</label>
+      <button id="analyseBtn" style="width:100%;margin-top:8px">Run full analysis</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Chart visibility toggles</div>
+      <small>Turn individual charts on or off in the analytics panel.</small>
+      <label class="checkline"><input class="chartToggle" data-target="secMain" type="checkbox" checked> Main grouped chart</label>
+      <label class="checkline"><input class="chartToggle" data-target="secCompare" type="checkbox" checked> Comparison chart</label>
+      <label class="checkline"><input class="chartToggle" data-target="secComposition" type="checkbox" checked> Composition chart</label>
+      <label class="checkline"><input class="chartToggle" data-target="secDistribution" type="checkbox" checked> Distribution chart</label>
+      <label class="checkline"><input class="chartToggle" data-target="secCumulative" type="checkbox" checked> Cumulative chart</label>
+      <label class="checkline"><input class="chartToggle" data-target="secScatter" type="checkbox" checked> Scatter comparison</label>
+      <label class="checkline"><input class="chartToggle" data-target="secStats" type="checkbox" checked> Descriptive statistics</label>
+      <label class="checkline"><input class="chartToggle" data-target="secGroups" type="checkbox" checked> Group ranking</label>
+      <label class="checkline"><input class="chartToggle" data-target="secQuality" type="checkbox" checked> Data quality</label>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Widget / API / embedded tool</div>
+      <p class="muted">Connect a permitted JSON endpoint or display a trusted external web widget. External services may require CORS or authentication.</p>
+      <label for="apiUrl">JSON API endpoint</label><input id="apiUrl" type="url" placeholder="https://example.org/api/data">
+      <label for="apiKey">Bearer token (optional)</label><input id="apiKey" type="password" autocomplete="off" placeholder="Avoid shared secrets in HTML">
+      <label for="apiMethod">Request method</label><select id="apiMethod"><option>GET</option><option>POST</option></select>
+      <div class="btn-grid"><button id="testApi">Test API</button><button id="importApi" class="secondary">Import JSON data</button></div>
+      <label for="widgetUrl">External widget URL</label><input id="widgetUrl" type="url" placeholder="https://trusted.example/widget">
+      <label class="checkline"><input id="widgetToggle" type="checkbox"> Show embedded widget</label>
+      <button id="loadWidget" class="secondary" style="width:100%">Load widget</button>
+      <div id="apiStatus" class="alert">No external service connected. File-based analysis works independently.</div>
+      <small>Embedded sites may block framing. Only use trusted URLs. API data import expects JSON records or GeoJSON.</small>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Download outputs</div>
+      <div class="btn-grid">
+        <button id="downloadCsv" class="secondary">Filtered CSV</button>
+        <button id="downloadGeo" class="secondary">Filtered GeoJSON</button>
+        <button id="downloadStats" class="secondary">Statistics CSV</button>
+        <button id="downloadGroups" class="secondary">Group CSV</button>
+        <button id="downloadQuality" class="secondary">Quality CSV</button>
+        <button id="downloadMainPng" class="secondary">Main chart PNG</button>
+        <button id="downloadComparePng" class="secondary">Comparison PNG</button>
+        <button id="downloadReport" class="secondary">Text report</button>
+      </div>
+    </div>
+
+    <div id="busy">Processing…</div>
+    <button id="demoBtn" class="secondary" style="width:100%;margin-bottom:8px">Load demonstration data</button>
+    <button id="clearAll" class="danger" style="width:100%">Clear all data</button>
+    <div id="status" class="alert">Ready. Upload CSV/GeoJSON or load demonstration data.</div>
+  </div></div>
+</section>
+
+<!-- CENTRE MAP -->
+<section class="panel map-panel">
+  <div class="panel-head"><h2>2. Interactive Map</h2><span id="mapCount" class="pill">0 features</span></div>
+  <div class="map-toolbar">
+    <select id="basemap" aria-label="Basemap">
+      <option value="street">Street</option><option value="satellite">Satellite</option>
+      <option value="terrain">Terrain</option><option value="hot">Humanitarian</option><option value="dark">Dark</option>
+    </select>
+    <button id="gambiaBtn" class="secondary">The Gambia</button>
+    <button id="fitBtn" class="secondary">Fit data</button>
+  </div>
+  <div id="map"></div>
+  <div class="legend">
+    <div class="legend-title">Map legend <span id="legendField"></span></div>
+    <div id="legendCategories" class="legend-swatches"></div>
+    <div id="legendBar" class="legend-bar"></div>
+    <div class="legend-labels"><span id="legendMin">Low / missing</span><span id="legendMax">High</span></div>
+    <div id="legendNote" class="legend-note">Click a feature to inspect its attributes. Blue outlines indicate the selected feature.</div>
+  </div>
+</section>
+
+<!-- RIGHT ANALYTICS -->
+<section class="panel">
+  <div class="panel-head"><h2>3. Analytics &amp; Statistics</h2><span id="resultCount" class="pill">0 records</span></div>
+  <div class="panel-scroll"><div class="panel-body">
+
+    <div class="analytics-section">
+      <div class="section-title">Key indicators</div>
+      <div class="kpis">
+        <div class="kpi"><div class="caption">Total records</div><div id="kLoaded" class="num">0</div></div>
+        <div class="kpi"><div class="caption">Filtered records</div><div id="kFiltered" class="num">0</div></div>
+        <div class="kpi"><div class="caption">Numeric total</div><div id="kTotal" class="num">—</div></div>
+        <div class="kpi"><div class="caption">Mean</div><div id="kMean" class="num">—</div></div>
+        <div class="kpi"><div class="caption">Median</div><div id="kMedian" class="num">—</div></div>
+        <div class="kpi"><div class="caption">Unique groups</div><div id="kGroups" class="num">0</div></div>
+        <div class="kpi"><div class="caption">Missing primary values</div><div id="kMissing" class="num">—</div></div>
+        <div class="kpi"><div class="caption">Features with geometry</div><div id="kGeometry" class="num">0</div></div>
+        <div class="kpi"><div class="caption">Attribute completeness</div><div id="kComplete" class="num">—</div></div>
+        <div class="kpi"><div class="caption">Potential outliers</div><div id="kOutliers" class="num">—</div></div>
+      </div>
+    </div>
+
+    <div id="secMain" class="analytics-section">
+      <div class="section-title">Main grouped analysis</div>
+      <div class="chart-wrap large"><canvas id="mainChart"></canvas></div>
+    </div>
+
+    <div id="secCompare" class="analytics-section">
+      <div class="section-title">Comparative analysis</div>
+      <p class="muted">Compare two numeric measures by the selected group. If no second measure is selected, the chart compares the top groups with the primary measure.</p>
+      <div class="chart-wrap large"><canvas id="compareChart"></canvas></div>
+    </div>
+
+    <div id="secComposition" class="analytics-section">
+      <div class="section-title">Category composition</div>
+      <div class="chart-wrap"><canvas id="compositionChart"></canvas></div>
+    </div>
+
+    <div id="secDistribution" class="analytics-section">
+      <div class="section-title">Value distribution</div>
+      <div class="chart-wrap"><canvas id="distributionChart"></canvas></div>
+    </div>
+
+    <div id="secCumulative" class="analytics-section">
+      <div class="section-title">Cumulative distribution</div>
+      <div class="chart-wrap"><canvas id="cumulativeChart"></canvas></div>
+    </div>
+
+    <div id="secScatter" class="analytics-section">
+      <div class="section-title">Measure-to-measure relationship</div>
+      <div class="chart-wrap"><canvas id="scatterChart"></canvas></div>
+      <div id="correlationText" class="alert">Select two numeric fields to calculate a correlation.</div>
+    </div>
+
+    <div id="secStats" class="analytics-section">
+      <div class="section-title">Extended descriptive statistics</div>
+      <div class="table-wrap"><table><thead><tr><th>Statistic</th><th>Value</th></tr></thead><tbody id="statsTable"></tbody></table></div>
+    </div>
+
+    <div id="secGroups" class="analytics-section">
+      <div class="section-title">Group ranking and contribution</div>
+      <div class="table-wrap"><table><thead><tr><th>Rank</th><th>Group</th><th>Value</th><th>Share</th></tr></thead><tbody id="groupTable"></tbody></table></div>
+    </div>
+
+    <div class="analytics-section">
+      <div class="section-title">Category frequency</div>
+      <div class="table-wrap"><table><thead><tr><th>Category</th><th>Records</th><th>Share</th></tr></thead><tbody id="frequencyTable"></tbody></table></div>
+    </div>
+
+    <div id="secQuality" class="analytics-section">
+      <div class="section-title">Data quality and completeness</div>
+      <div id="quality" class="alert">Load data to run quality checks.</div>
+      <div class="table-wrap"><table><thead><tr><th>Field</th><th>Missing</th><th>Complete</th></tr></thead><tbody id="missingTable"></tbody></table></div>
+    </div>
+
+    <div class="analytics-section">
+      <div class="section-title">Filtered attribute table</div>
+      <div class="row" style="margin:7px 0"><div id="pageInfo" class="muted">No records</div><button id="prevPage" class="secondary">Previous</button><button id="nextPage" class="secondary">Next</button></div>
+      <div class="table-wrap"><table id="attributeTable"><thead></thead><tbody></tbody></table></div>
+    </div>
+
+    <div id="widgetSection" class="analytics-section" style="display:none">
+      <div class="section-title">External widget</div>
+      <iframe id="widgetFrame" title="External widget" sandbox="allow-scripts allow-forms allow-same-origin allow-popups" referrerpolicy="no-referrer"></iframe>
+      <p class="muted">The embedded site is external to GBoS GEOAI. Its availability and displayed content depend on that provider.</p>
+    </div>
+
+    <div class="analytics-section">
+      <div class="section-title">Methodology and interpretation</div>
+      <p class="muted">Results describe the currently filtered records. Numeric statistics exclude values that cannot be parsed as numbers. Variance and standard deviation use population formulas. Outliers use the 1.5 × IQR screening rule.</p>
+      <p class="muted">Correlation is calculated on paired numeric values and does not imply causation. Group comparisons depend on the chosen measure and aggregation. Verify units, missing data, duplicates, identifiers and geographic coverage before official use.</p>
+    </div>
+  </div></div>
+</section>
+</main>
+
+<footer><div><strong>GBoS GEOAI · Advanced Business Entity Explorer</strong> | Produced by Ansu Singhateh · GIS Analyst | GIS / Cartography Unit | GBoS<br>Research and educational use · Validate all source data before official publication</div></footer>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const S={
+ csvRows:[],csvHeaders:[],geoOriginal:null,all:[],visible:[],
+ charts:{},dataLayer:null,labelLayer:null,highlight:null,bases:{},
+ page:0,pageSize:25,lastStats:{},lastGroups:[],lastQuality:{}
+};
+const fmt=n=>Number.isFinite(n)?n.toLocaleString(undefined,{maximumFractionDigits:3}):"—";
+const pct=n=>Number.isFinite(n)?n.toFixed(1)+"%":"—";
+const blank=v=>v===null||v===undefined||String(v).trim()==="";
+const norm=v=>String(v??"").toLowerCase().replace(/[^a-z0-9]/g,"");
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function num(v){
+ if(typeof v==="number")return Number.isFinite(v)?v:null;
+ if(blank(v))return null;
+ const n=Number(String(v).trim().replace(/[,$%\s]/g,""));
+ return Number.isFinite(n)?n:null;
+}
+function uniq(a){return [...new Set(a.filter(v=>!blank(v)).map(String))].sort((a,b)=>a.localeCompare(b,undefined,{numeric:true}));}
+function status(t,type=""){ $("status").textContent=t;$("status").className="alert"+(type?" "+type:"");}
+function apiStatus(t,type=""){ $("apiStatus").textContent=t;$("apiStatus").className="alert"+(type?" "+type:"");}
+function downloadText(text,name,type="text/plain;charset=utf-8"){
+ const u=URL.createObjectURL(new Blob([text],{type})),a=document.createElement("a");
+ a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),1200);
+}
+function downloadCsv(rows,name){
+ if(!rows.length){status("No records available to export.","error");return;}
+ downloadText("\uFEFF"+Papa.unparse(rows,{quotes:true}),name,"text/csv;charset=utf-8");
+}
+function fill(el,values,placeholder){
+ const old=el.value;el.innerHTML="";
+ const first=document.createElement("option");first.value="";first.textContent=placeholder;el.appendChild(first);
+ values.forEach(v=>{const o=document.createElement("option");o.value=v;o.textContent=v;el.appendChild(o);});
+ if(values.includes(old))el.value=old;
+}
+function quantile(a,q){
+ if(!a.length)return null;const s=[...a].sort((x,y)=>x-y),p=(s.length-1)*q,l=Math.floor(p),h=Math.ceil(p);
+ return s[l]+(s[h]-s[l])*(p-l);
+}
+function median(a){return quantile(a,.5);}
+function variance(a){
+ if(!a.length)return null;const m=a.reduce((s,v)=>s+v,0)/a.length;
+ return a.reduce((s,v)=>s+(v-m)**2,0)/a.length;
+}
+function sd(a){const v=variance(a);return v===null?null:Math.sqrt(v);}
+function pearson(pairs){
+ if(pairs.length<2)return null;
+ const xs=pairs.map(p=>p.x),ys=pairs.map(p=>p.y);
+ const mx=xs.reduce((a,b)=>a+b,0)/xs.length,my=ys.reduce((a,b)=>a+b,0)/ys.length;
+ const dx=xs.reduce((s,v)=>s+(v-mx)**2,0),dy=ys.reduce((s,v)=>s+(v-my)**2,0);
+ if(dx===0||dy===0)return null;
+ return pairs.reduce((s,p)=>s+(p.x-mx)*(p.y-my),0)/Math.sqrt(dx*dy);
+}
+function keys(){
+ const set=new Set(S.csvHeaders);
+ S.all.forEach(f=>Object.keys(f.properties||{}).forEach(k=>{if(!k.startsWith("__"))set.add(k);}));
+ return [...set];
+}
+function discover(list,patterns){return list.find(k=>patterns.some(p=>p.test(k)))||"";}
+
+/* MAP AND BASEMAPS */
+const map=L.map("map",{preferCanvas:true}).setView([13.45,-16.58],8);
+S.bases={
+ street:L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}),
+ satellite:L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",{maxZoom:19,attribution:"© Esri"}),
+ terrain:L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png",{maxZoom:17,attribution:"© OpenTopoMap"}),
+ hot:L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap HOT"}),
+ dark:L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",{maxZoom:20,attribution:"© CARTO"})
+};
+S.bases.street.addTo(map);
+$("basemap").addEventListener("change",()=>{
+ Object.values(S.bases).forEach(l=>{if(map.hasLayer(l))map.removeLayer(l);});
+ S.bases[$("basemap").value].addTo(map);
+});
+$("gambiaBtn").onclick=()=>map.setView([13.45,-16.58],8);
+$("fitBtn").onclick=$("zoomBtn").onclick=()=>{
+ if(S.dataLayer&&S.dataLayer.getLayers().length){
+  try{const b=S.dataLayer.getBounds();if(b.isValid()){map.fitBounds(b,{padding:[20,20],maxZoom:16});return;}}catch(e){}
+ }
+ map.setView([13.45,-16.58],8);
+};
+function clearMap(){
+ ["dataLayer","labelLayer","highlight"].forEach(k=>{if(S[k]&&map.hasLayer(S[k]))map.removeLayer(S[k]);S[k]=null;});
+}
+$("clearHighlight").onclick=()=>{if(S.highlight)map.removeLayer(S.highlight);S.highlight=null;};
+
+const palettes={
+ warm:["#ffffb2","#fecc5c","#fd8d3c","#f03b20","#bd0026"],
+ blue:["#eff3ff","#bdd7e7","#6baed6","#3182bd","#08519c"],
+ green:["#f7fcf5","#c7e9c0","#74c476","#31a354","#006d2c"],
+ purple:["#fcfbfd","#dadaeb","#9e9ac8","#756bb1","#54278f"],
+ viridis:["#440154","#3b528b","#21918c","#5ec962","#fde725"],
+ diverging:["#2166ac","#67a9cf","#f7f7f7","#ef8a62","#b2182b"],
+ traffic:["#d73027","#fc8d59","#fee08b","#d9ef8b","#1a9850"],
+ mono:["#f7fbff","#c6dbef","#6baed6","#2171b5","#08306b"]
+};
+function featureKind(f){return f.geometry?.type||"None";}
+function allowed(f){
+ const t=featureKind(f);
+ if(t==="Point"||t==="MultiPoint")return $("togglePoints").checked;
+ if(t==="LineString"||t==="MultiLineString")return $("toggleLines").checked;
+ if(t==="Polygon"||t==="MultiPolygon")return $("togglePolygons").checked;
+ return true;
+}
+function getRange(features,field){
+ const a=features.map(f=>num((f.properties||{})[field])).filter(v=>v!==null);
+ return a.length?[Math.min(...a),Math.max(...a)]:[0,1];
+}
+function mapColor(f,range,catMap){
+ const mode=$("mapMode").value,field=$("colorField").value,p=f.properties||{};
+ if(mode==="single")return $("singleColor").value;
+ if(mode==="category")return catMap[String(p[field]??"(Missing)") ]||"#9aa8b7";
+ const v=num(p[field]);
+ if(v===null)return "#9aa8b7";
+ const pal=palettes[$("palette").value]||palettes.blue;
+ const t=range[0]===range[1]?.5:Math.max(0,Math.min(.9999,(v-range[0])/(range[1]-range[0])));
+ return pal[Math.floor(t*pal.length)];
+}
+function drawMap(){
+ clearMap();
+ const features=S.visible.filter(f=>f.geometry&&allowed(f));
+ $("mapCount").textContent=fmt(features.length)+" features";
+ const field=$("colorField").value,mode=$("mapMode").value,range=getRange(features,field);
+ const categories=uniq(features.map(f=>(f.properties||{})[field]).filter(v=>!blank(v)));
+ const pal=palettes[$("palette").value]||palettes.blue;
+ const catMap={};categories.forEach((v,i)=>catMap[v]=pal[i%pal.length]);
+ const geo={type:"FeatureCollection",features};
+ S.dataLayer=L.geoJSON(geo,{
+  style:f=>({color:"#455a70",weight:1,opacity:.95,fillColor:mapColor(f,range,catMap),fillOpacity:Number($("opacity").value)/100}),
+  pointToLayer:(f,ll)=>L.circleMarker(ll,{radius:Number($("pointRadius").value),color:"#344f6a",weight:1,fillColor:mapColor(f,range,catMap),fillOpacity:.9}),
+  onEachFeature:(f,layer)=>{
+   const p=f.properties||{};
+   layer.bindPopup("<div style='max-height:280px;overflow:auto'><b>Feature attributes</b><table>"+Object.entries(p).filter(([k])=>!k.startsWith("__")).slice(0,80).map(([k,v])=>"<tr><th>"+esc(k)+"</th><td>"+esc(v)+"</td></tr>").join("")+"</table></div>");
+   layer.on("click",()=>{
+    if(S.highlight)map.removeLayer(S.highlight);
+    S.highlight=L.geoJSON(f,{style:{color:"#0878ff",weight:4,fillColor:"#66b6ff",fillOpacity:.3},pointToLayer:(ff,ll)=>L.circleMarker(ll,{radius:10,color:"#0878ff",weight:4,fillColor:"#66b6ff"})}).addTo(map);
+   });
+   if($("showLabels").checked){
+    const name=p["BUSINESS ENTITY"]||p["EA NAME"]||p["WARD NAME"]||p.name||p.NAME;
+    if(name){
+     let centre=null;try{centre=layer.getBounds?layer.getBounds().getCenter():layer.getLatLng?.();}catch(e){}
+     if(centre){if(!S.labelLayer)S.labelLayer=L.layerGroup();S.labelLayer.addLayer(L.marker(centre,{interactive:false,icon:L.divIcon({className:"feature-label",html:"<span style='background:#ffffffdf;padding:2px 4px;border:1px solid #cbd6e2;border-radius:3px;font-size:10px'>"+esc(name)+"</span>",iconSize:null})}));}
+    }
+   }
+  }
+ }).addTo(map);
+ if(S.labelLayer)S.labelLayer.addTo(map);
+ $("legendField").textContent=field?"· "+field:"";
+ $("legendCategories").innerHTML="";
+ $("legendBar").style.display=mode==="numeric"?"block":"none";
+ if(mode==="category"){
+  $("legendCategories").innerHTML=categories.slice(0,18).map((c,i)=>"<span class='swatch'><i style='background:"+catMap[c]+"'></i>"+esc(c)+"</span>").join("")||"No categories";
+ }
+ if(mode==="single"){
+  $("legendCategories").innerHTML="<span class='swatch'><i style='background:"+$("singleColor").value+"'></i>All displayed features</span>";
+ }
+ $("legendBar").style.background="linear-gradient(90deg,"+pal.join(",")+")";
+ $("legendMin").textContent=mode==="numeric"?fmt(range[0]):"Category / type";
+ $("legendMax").textContent=mode==="numeric"?fmt(range[1]):"Feature";
+ $("legendNote").textContent=mode==="numeric"?"Numeric colour scale; grey represents missing or nonnumeric values.":mode==="category"?"Colours distinguish categories; only the first 18 legend categories are displayed.":"Click a feature to inspect its attributes. Blue outlines indicate the selected feature.";
+}
+["mapMode","colorField","palette","singleColor","pointRadius","opacity","showLabels","togglePoints","toggleLines","togglePolygons"].forEach(id=>$(id).addEventListener("change",drawMap));
+["pointRadius","opacity"].forEach(id=>$(id).addEventListener("input",drawMap));
+
+/* FILE UPLOADS */
+$("csvFile").addEventListener("change",e=>{if(e.target.files[0])loadCsv(e.target.files[0]);});
+$("geoFile").addEventListener("change",e=>{if(e.target.files[0])loadGeo(e.target.files[0]);});
+function setupDrop(id,fn){
+ const el=$(id);
+ ["dragenter","dragover"].forEach(t=>el.addEventListener(t,e=>{e.preventDefault();el.classList.add("drag");}));
+ ["dragleave","drop"].forEach(t=>el.addEventListener(t,e=>{e.preventDefault();el.classList.remove("drag");}));
+ el.addEventListener("drop",e=>{const f=e.dataTransfer?.files?.[0];if(f)fn(f);});
+}
+setupDrop("csvDrop",loadCsv);setupDrop("geoDrop",loadGeo);
+
+function loadCsv(file){
+ $("busy").style.display="block";
+ Papa.parse(file,{header:true,skipEmptyLines:"greedy",complete:r=>{
+  $("busy").style.display="none";
+  const headers=(r.meta.fields||[]).map(v=>String(v).trim());
+  const rows=(r.data||[]).filter(x=>x&&Object.values(x).some(v=>!blank(v)));
+  if(!headers.length||!rows.length){status("CSV has no usable rows or header fields.","error");return;}
+  S.csvRows=rows;S.csvHeaders=headers;
+  $("csvName").textContent=file.name;$("csvInfo").textContent=fmt(rows.length)+" records · "+fmt(headers.length)+" columns";
+  if(!S.geoOriginal)S.all=rows.map((p,i)=>({type:"Feature",geometry:null,properties:{...p,__rowNumber:i+1}}));
+  populateJoin();refresh("CSV loaded successfully.");
+ },error:e=>{$("busy").style.display="none";status("CSV error: "+e.message,"error");}});
+}
+function loadGeo(file){
+ $("busy").style.display="block";const reader=new FileReader();
+ reader.onload=()=>{
+  $("busy").style.display="none";
+  try{
+   const j=JSON.parse(reader.result);
+   let fs=j.type==="FeatureCollection"?j.features:j.type==="Feature"?[j]:null;
+   if(!Array.isArray(fs))throw Error("Expected GeoJSON Feature or FeatureCollection.");
+   fs=fs.filter(f=>f&&f.geometry);
+   if(!fs.length)throw Error("No features with geometry found.");
+   S.geoOriginal={type:"FeatureCollection",features:fs.map(f=>({type:"Feature",geometry:f.geometry,properties:{...(f.properties||{})}}))};
+   S.all=S.geoOriginal.features.slice();
+   $("geoName").textContent=file.name;$("geoInfo").textContent=fmt(fs.length)+" spatial features";
+   populateJoin();refresh("GeoJSON loaded successfully.");
+  }catch(e){status("GeoJSON error: "+e.message,"error");}
+ };
+ reader.onerror=()=>{$("busy").style.display="none";status("Unable to read this file.","error");};
+ reader.readAsText(file);
+}
+function populateJoin(){
+ fill($("joinCsv"),S.csvHeaders,"Select CSV key");
+ const gkeys=S.geoOriginal?.features?.length?Object.keys(S.geoOriginal.features[0].properties||{}):[];
+ fill($("joinGeo"),gkeys,"Select GeoJSON key");
+ const ck=S.csvHeaders.find(k=>/ea.?code|object.?id|entity.?id|business.?id|identifier/i.test(k));
+ const gk=gkeys.find(k=>/ea.?code|object.?id|entity.?id|business.?id|identifier/i.test(k));
+ if(ck)$("joinCsv").value=ck;if(gk)$("joinGeo").value=gk;
+}
+$("joinBtn").onclick=()=>{
+ if(!S.csvRows.length||!S.geoOriginal){status("Load both CSV and GeoJSON before joining.","error");return;}
+ const ck=$("joinCsv").value,gk=$("joinGeo").value;
+ if(!ck||!gk){status("Choose both join fields.","error");return;}
+ const lookup=new Map();
+ S.csvRows.forEach(r=>{const k=norm(r[ck]);if(k&&!lookup.has(k))lookup.set(k,r);});
+ let matched=0;
+ S.all=S.geoOriginal.features.map(f=>{
+  const p={...(f.properties||{})},r=lookup.get(norm(p[gk]));
+  if(r){matched++;Object.entries(r).forEach(([k,v])=>{if(blank(p[k]))p[k]=v;});p.__csvMatched="Yes";}
+  else p.__csvMatched="No";
+  return {type:"Feature",geometry:f.geometry,properties:p};
+ });
+ refresh("Join completed: "+fmt(matched)+" spatial features matched.","ok");
+};
+
+/* FILTERS AND FIELD CONTROLS */
+function buildControls(){
+ const k=keys();
+ const lga=discover(k,[/lga.?name/i,/region.?name/i,/^region$/i,/^lga$/i]);
+ const district=discover(k,[/district.?name/i,/^district$/i]);
+ const ward=discover(k,[/ward.?name/i,/^ward$/i]);
+ setAdmin("lga",lga,"All LGAs / Regions");setAdmin("district",district,"All districts");setAdmin("ward",ward,"All wards");
+ const sample=S.all.slice(0,1500);
+ const numericFields=k.filter(field=>{
+  let valid=0,total=0;
+  sample.forEach(f=>{const v=(f.properties||{})[field];if(!blank(v)){total++;if(num(v)!==null)valid++;}});
+  return total>0&&valid/total>=.7;
+ });
+ fill($("metricField"),numericFields,"Select numeric measure");
+ fill($("compareField"),numericFields,"Optional second measure");
+ fill($("colorField"),k,"Select field");
+ fill($("groupField"),k,"Select group field");
+ const primary=numericFields.find(f=>/business.?count|entity.?count|population|employee|sales|total|number|count|area/i.test(f))||numericFields[0]||"";
+ if(primary)$("metricField").value=primary;
+ const second=numericFields.find(f=>f!==primary);
+ if(second)$("compareField").value=second;
+ const g=discover(k,[/ward.?name/i,/district.?name/i,/lga.?name/i,/business.?entity/i])||k[0]||"";
+ if(g)$("groupField").value=g;
+ if(primary)$("colorField").value=primary;
+}
+function setAdmin(id,field,placeholder){
+ const el=$(id),old=el.value;
+ el.dataset.field=field||"";
+ fill(el,field?uniq(S.all.map(f=>(f.properties||{})[field])):[],placeholder);
+ if([...el.options].some(o=>o.value===old))el.value=old;
+}
+function filtered(){
+ const vals={lga:$("lga").value,district:$("district").value,ward:$("ward").value};
+ const fields={lga:$("lga").dataset.field,district:$("district").dataset.field,ward:$("ward").dataset.field};
+ const q=$("search").value.trim().toLowerCase();
+ return S.all.filter(f=>{
+  const p=f.properties||{};
+  for(const k of ["lga","district","ward"])if(vals[k]&&String(p[fields[k]]??"")!==vals[k])return false;
+  if(q&&!Object.values(p).some(v=>String(v??"").toLowerCase().includes(q)))return false;
+  return true;
+ });
+}
+function apply(){
+ S.visible=filtered();S.page=0;
+ $("resultCount").textContent=fmt(S.visible.length)+" records";
+ drawMap();analytics();renderTable();
+}
+$("applyBtn").onclick=apply;
+$("analyseBtn").onclick=()=>{apply();status("Analysis refreshed.","ok");};
+$("search").addEventListener("keydown",e=>{if(e.key==="Enter")apply();});
+$("resetBtn").onclick=()=>{
+ ["lga","district","ward"].forEach(id=>$(id).selectedIndex=0);
+ $("search").value="";apply();
+};
+function refresh(message,type="ok"){
+ buildControls();apply();status(message,type);
+}
+
+/* STATISTICAL CALCULATIONS */
+function values(field){return S.visible.map(f=>num((f.properties||{})[field])).filter(v=>v!==null);}
+function stats(a){
+ const n=a.length;
+ if(!n)return {n:0,missing:S.visible.length,total:null,mean:null,median:null,min:null,max:null,range:null,q1:null,q3:null,iqr:null,variance:null,sd:null,cv:null,skew:null,outliers:0,zeros:0,positive:0,negative:0};
+ const total=a.reduce((s,v)=>s+v,0),mean=total/n,q1=quantile(a,.25),q3=quantile(a,.75),iqr=q3-q1,sdev=sd(a);
+ const skew=sdev? a.reduce((s,v)=>s+((v-mean)/sdev)**3,0)/n:0;
+ return {n,missing:S.visible.length-n,total,mean,median:median(a),min:Math.min(...a),max:Math.max(...a),range:Math.max(...a)-Math.min(...a),q1,q3,iqr,variance:variance(a),sd:sdev,cv:mean!==0?sdev/Math.abs(mean)*100:null,skew,outliers:a.filter(v=>v<q1-1.5*iqr||v>q3+1.5*iqr).length,zeros:a.filter(v=>v===0).length,positive:a.filter(v=>v>0).length,negative:a.filter(v=>v<0).length};
+}
+function grouped(){
+ const gf=$("groupField").value,mf=$("metricField").value,mode=$("metric").value;
+ const g=new Map();
+ S.visible.forEach(f=>{
+  const p=f.properties||{},label=blank(p[gf])?"(Missing)":String(p[gf]);
+  if(!g.has(label))g.set(label,{label,count:0,vals:[],compare:[]});
+  const x=g.get(label);x.count++;
+  const v=num(p[mf]);if(v!==null)x.vals.push(v);
+  const c=num(p[$("compareField").value]);if(c!==null)x.compare.push(c);
+ });
+ return [...g.values()].map(x=>{
+  const a=x.vals;
+  let value=mode==="count"?x.count:mode==="sum"?a.reduce((s,v)=>s+v,0):mode==="mean"?(a.length?a.reduce((s,v)=>s+v,0)/a.length:0):mode==="median"?(median(a)??0):mode==="min"?(a.length?Math.min(...a):0):(a.length?Math.max(...a):0);
+  const b=x.compare;
+  const compareValue=$("metric").value==="count"?x.count:$("metric").value==="sum"?b.reduce((s,v)=>s+v,0):$("metric").value==="mean"?(b.length?b.reduce((s,v)=>s+v,0)/b.length:0):$("metric").value==="median"?(median(b)??0):$("metric").value==="min"?(b.length?Math.min(...b):0):(b.length?Math.max(...b):0);
+  return {...x,value,compareValue};
+ }).sort((a,b)=>b.value-a.value);
+}
+function quality(){
+ const fs=S.visible,k=keys(),total=fs.length*k.length;
+ const per=k.map(field=>{const missing=fs.filter(f=>blank((f.properties||{})[field])).length;return {field,missing,complete:fs.length?100*(fs.length-missing)/fs.length:0};});
+ const missing=per.reduce((s,r)=>s+r.missing,0);
+ const geom=fs.filter(f=>f.geometry).length;
+ const types={};fs.forEach(f=>{const t=featureKind(f);types[t]=(types[t]||0)+1;});
+ const id=discover(k,[/ea.?code/i,/entity.?id/i,/business.?id/i,/object.?id/i]);
+ let duplicates=null;
+ if(id){const ids=fs.map(f=>(f.properties||{})[id]).filter(v=>!blank(v)).map(norm);duplicates=ids.length-new Set(ids).size;}
+ return {per,missing,total,completeness:total?100*(total-missing)/total:0,geom,types,duplicates,id};
+}
+
+/* CHARTS */
+const chartColors=["#1769aa","#008751","#e0a526","#cf3b45","#7957a8","#159d9b","#ed7d31","#6887a8","#5c9dca","#b15e87","#658c43","#d06a3a"];
+function chart(id,type,labels,datasets,title,horizontal=false){
+ if(S.charts[id])S.charts[id].destroy();
+ const pie=["pie","doughnut","polarArea"].includes(type);
+ const ds=datasets.map((d,i)=>({
+  label:d.label,data:d.data,
+  backgroundColor:pie?labels.map((_,j)=>chartColors[j%chartColors.length]):d.color||chartColors[i%chartColors.length],
+  borderColor:pie?labels.map((_,j)=>chartColors[j%chartColors.length]):d.color||chartColors[i%chartColors.length],
+  borderWidth:1,tension:.25,fill:false,pointRadius:type==="scatter"?3:2
+ }));
+ S.charts[id]=new Chart($(id).getContext("2d"),{
+  type,data:{labels:labels,datasets:ds},
+  options:{responsive:true,maintainAspectRatio:false,indexAxis:horizontal?"y":"x",
+   plugins:{legend:{display:pie||datasets.length>1,position:"bottom"},title:{display:true,text:title},tooltip:{mode:"nearest",intersect:false}},
+   scales:pie?{}:{x:{ticks:{maxRotation:horizontal?0:45}},y:{beginAtZero:true}}
+  }
+ });
+}
+function showSection(id,show){$(id).style.display=show?"":"none";}
+function analytics(){
+ const fs=S.visible,a=values($("metricField").value),st=stats(a),gs=grouped(),frq=new Map();
+ const gf=$("groupField").value;
+ fs.forEach(f=>{const v=(f.properties||{})[gf],k=blank(v)?"(Missing)":String(v);frq.set(k,(frq.get(k)||0)+1);});
+ const fq=[...frq.entries()].map(([label,count])=>({label,count})).sort((x,y)=>y.count-x.count);
+ const q=quality();
+ S.lastStats=st;S.lastGroups=gs;S.lastQuality=q;
+
+ $("kLoaded").textContent=fmt(S.all.length);$("kFiltered").textContent=fmt(fs.length);
+ $("kTotal").textContent=fmt(st.total);$("kMean").textContent=fmt(st.mean);$("kMedian").textContent=fmt(st.median);
+ $("kGroups").textContent=fmt(fq.length);$("kMissing").textContent=fmt(st.missing);
+ $("kGeometry").textContent=fmt(q.geom);$("kComplete").textContent=pct(q.completeness);$("kOutliers").textContent=fmt(st.outliers);
+
+ const top=gs.slice(0,Number($("topN").value)||10),labels=top.map(x=>x.label);
+ chart("mainChart",$("chartType").value,labels,[{label:$("metric").value+" · "+$("metricField").value,data:top.map(x=>x.value)}],"Primary measure by "+gf);
+ const compareField=$("compareField").value;
+ let ds=[{label:$("metricField").value||"Primary measure",data:top.map(x=>x.value),color:chartColors[0]}];
+ if(compareField){
+  let second=top.map(x=>x.compareValue);
+  if($("normalizeCompare").checked){
+   const first=second.find(v=>v!==0);const base=first||1;second=second.map(v=>v/base*100);
+   ds=[{label:$("metricField").value+" (raw)",data:top.map(x=>x.value),color:chartColors[0]},{label:compareField+" (index)",data:second,color:chartColors[1]}];
+  }else ds.push({label:compareField,data:second,color:chartColors[1]});
+ }else{
+  ds=[{label:"Top-group comparison",data:top.map(x=>x.value),color:chartColors[1]}];
+ }
+ chart("compareChart","bar",labels,ds,compareField?"Compare measures by "+gf:"Top categories by "+$("metricField").value,true);
+ chart("compositionChart","doughnut",fq.slice(0,12).map(x=>x.label),[{label:"Record share",data:fq.slice(0,12).map(x=>x.count)}],"Record composition by "+gf);
+
+ let bins=10,counts=Array(bins).fill(0),binLabels=[];
+ if(a.length){
+  const min=st.min,max=st.max,w=(max-min)/bins||1;
+  a.forEach(v=>counts[Math.min(bins-1,Math.floor((v-min)/w))]++);
+  binLabels=counts.map((_,i)=>fmt(min+i*w)+"–"+fmt(min+(i+1)*w));
+ }
+ chart("distributionChart","bar",binLabels,[{label:"Frequency",data:counts,color:chartColors[2]}],"Distribution of "+$("metricField").value);
+
+ const sorted=[...a].sort((x,y)=>x-y),cumX=[],cumY=[];
+ if(sorted.length){
+  const step=Math.max(1,Math.ceil(sorted.length/60));
+  for(let i=0;i<sorted.length;i+=step){cumX.push(fmt(sorted[i]));cumY.push((i+1)/sorted.length*100);}
+  if(cumY[cumY.length-1]!==100){cumX.push(fmt(sorted[sorted.length-1]));cumY.push(100);}
+ }
+ chart("cumulativeChart","line",cumX,[{label:"Cumulative percentage",data:cumY,color:chartColors[3]}],"Cumulative distribution (%)");
+
+ const mf=$("metricField").value,cf=$("compareField").value,pairs=[];
+ fs.forEach(f=>{
+  const p=f.properties||{},x=num(p[mf]),y=num(p[cf]);
+  if(x!==null&&y!==null)pairs.push({x,y});
+ });
+ chart("scatterChart","scatter",[],[{label:mf+" vs "+cf,data:pairs,color:chartColors[4]}],"Paired numeric values");
+ const r=pearson(pairs);
+ $("correlationText").textContent=cf?
+  "Paired observations: "+fmt(pairs.length)+". Pearson correlation: "+fmt(r)+". Correlation ranges from -1 to +1 and does not demonstrate causation.":
+  "Choose a second numeric field to compare paired values.";
+
+ const statRows=[
+ ["Valid numeric observations",st.n],["Missing / nonnumeric",st.missing],["Sum",st.total],["Mean",st.mean],
+ ["Median",st.median],["Minimum",st.min],["Maximum",st.max],["Range",st.range],
+ ["First quartile (Q1)",st.q1],["Third quartile (Q3)",st.q3],["Interquartile range",st.iqr],
+ ["Population variance",st.variance],["Population standard deviation",st.sd],
+ ["Coefficient of variation (%)",st.cv],["Skewness",st.skew],["Potential outliers",st.outliers],
+ ["Zero values",st.zeros],["Positive values",st.positive],["Negative values",st.negative],
+ ["Distinct group categories",fq.length],["Features with geometry",q.geom],["Attribute completeness (%)",q.completeness],
+ ["Potential duplicate IDs",q.duplicates]
+ ];
+ $("statsTable").innerHTML=statRows.map(([k,v])=>"<tr><td>"+esc(k)+"</td><td>"+esc(v===null?"—":fmt(v))+"</td></tr>").join("");
+
+ const positiveTotal=gs.reduce((s,g)=>s+Math.max(0,g.value),0);
+ $("groupTable").innerHTML=gs.slice(0,40).map((g,i)=>{
+  const share=positiveTotal?Math.max(0,g.value)/positiveTotal*100:0;
+  return "<tr><td>"+(i+1)+"</td><td>"+esc(g.label)+"</td><td>"+fmt(g.value)+"</td><td>"+pct(share)+"<div class='progress'><span style='width:"+Math.min(100,share)+"%'></span></div></td></tr>";
+ }).join("");
+ const total=fq.reduce((s,x)=>s+x.count,0);
+ $("frequencyTable").innerHTML=fq.slice(0,40).map(x=>"<tr><td>"+esc(x.label)+"</td><td>"+fmt(x.count)+"</td><td>"+pct(total?100*x.count/total:0)+"</td></tr>").join("");
+ $("quality").innerHTML="<b>Records:</b> "+fmt(fs.length)+"<br><b>Attributes:</b> "+fmt(q.per.length)+
+  "<br><b>Overall completeness:</b> "+pct(q.completeness)+"<br><b>Missing cells:</b> "+fmt(q.missing)+" / "+fmt(q.total)+
+  "<br><b>Spatial features:</b> "+fmt(q.geom)+"<br><b>Geometry types:</b> "+esc(Object.entries(q.types).map(([k,v])=>k+": "+v).join(", "))+
+  "<br><b>Duplicate ID candidates:</b> "+esc(q.duplicates===null?"No suitable ID field found":fmt(q.duplicates))+
+  "<br><small>Duplicate and outlier checks are screening indicators, not proof of errors.</small>";
+ $("missingTable").innerHTML=q.per.slice().sort((x,y)=>y.missing-x.missing).slice(0,100).map(x=>"<tr><td>"+esc(x.field)+"</td><td>"+fmt(x.missing)+"</td><td>"+pct(x.complete)+"</td></tr>").join("");
+ document.querySelectorAll(".chartToggle").forEach(el=>showSection(el.dataset.target,el.checked));
+}
+document.querySelectorAll(".chartToggle").forEach(el=>el.addEventListener("change",()=>showSection(el.dataset.target,el.checked)));
+["metricField","compareField","groupField","metric","topN","chartType","normalizeCompare"].forEach(id=>$(id).addEventListener("change",analytics));
+
+/* ATTRIBUTE TABLE */
+function renderTable(){
+ const fs=S.visible,k=keys().slice(0,12),pages=Math.max(1,Math.ceil(fs.length/S.pageSize));
+ S.page=Math.max(0,Math.min(S.page,pages-1));
+ const rows=fs.slice(S.page*S.pageSize,(S.page+1)*S.pageSize);
+ $("pageInfo").textContent=fs.length?"Page "+(S.page+1)+" / "+pages+" · "+fmt(fs.length)+" records":"No records";
+ $("prevPage").disabled=S.page<=0;$("nextPage").disabled=S.page>=pages-1;
+ $("attributeTable").querySelector("thead").innerHTML="<tr>"+k.map(x=>"<th>"+esc(x)+"</th>").join("")+"</tr>";
+ $("attributeTable").querySelector("tbody").innerHTML=rows.map(f=>"<tr>"+k.map(x=>"<td>"+esc((f.properties||{})[x]??"")+"</td>").join("")+"</tr>").join("");
+}
+$("prevPage").onclick=()=>{S.page--;renderTable();};
+$("nextPage").onclick=()=>{S.page++;renderTable();};
+function apply(){
+ S.visible=filtered();S.page=0;
+ $("resultCount").textContent=fmt(S.visible.length)+" records";
+ drawMap();analytics();renderTable();
+}
+
+/* EXPORTED DATA */
+function propsRows(){return S.visible.map(f=>Object.fromEntries(Object.entries(f.properties||{}).filter(([k])=>!k.startsWith("__"))));}
+$("downloadCsv").onclick=()=>downloadCsv(propsRows(),"GBoS_GEOAI_Filtered_Records.csv");
+$("downloadGeo").onclick=()=>{
+ const features=S.visible.filter(f=>f.geometry).map(f=>({type:"Feature",geometry:f.geometry,properties:Object.fromEntries(Object.entries(f.properties||{}).filter(([k])=>!k.startsWith("__")))}));
+ if(!features.length){status("No geometry available for GeoJSON export.","error");return;}
+ downloadText(JSON.stringify({type:"FeatureCollection",features},null,2),"GBoS_GEOAI_Filtered.geojson","application/geo+json");
+};
+$("downloadStats").onclick=()=>downloadCsv(Object.entries(S.lastStats).map(([Statistic,Value])=>({Statistic,Value:Value??""})),"GBoS_GEOAI_Statistics.csv");
+$("downloadGroups").onclick=()=>downloadCsv(S.lastGroups.map((g,i)=>({Rank:i+1,Group:g.label,Value:g.value,PrimaryValidCount:g.vals.length,ComparisonValue:g.compareValue})),"GBoS_GEOAI_Group_Comparison.csv");
+$("downloadQuality").onclick=()=>downloadCsv(S.lastQuality.per.map(x=>({Field:x.field,Missing:x.missing,CompletenessPercent:x.complete})),"GBoS_GEOAI_Data_Quality.csv");
+function saveChart(id,name){
+ if(!S.charts[id]){status("Run analysis before exporting a chart.","error");return;}
+ const a=document.createElement("a");a.href=S.charts[id].toBase64Image();a.download=name;a.click();
+}
+$("downloadMainPng").onclick=()=>saveChart("mainChart","GBoS_GEOAI_Main_Chart.png");
+$("downloadComparePng").onclick=()=>saveChart("compareChart","GBoS_GEOAI_Comparison_Chart.png");
+$("downloadReport").onclick=()=>{
+ const s=S.lastStats,q=S.lastQuality;
+ const lines=[
+ "GBoS GEOAI — Business Entity Explorer",
+ "Produced by Ansu Singhateh | GIS Analyst | GIS / Cartography Unit | GBoS",
+ "Records loaded: "+S.all.length,"Records analysed: "+S.visible.length,
+ "Primary measure: "+$("metricField").value,"Comparison measure: "+$("compareField").value,
+ "Group field: "+$("groupField").value,"Aggregation: "+$("metric").value,
+ ...Object.entries(s).map(([k,v])=>k+": "+(v??"—")),
+ "Attribute completeness: "+(q.completeness??0).toFixed(2)+"%",
+ "Spatial features: "+(q.geom??0)
+ ];
+ downloadText(lines.join("\n"),"GBoS_GEOAI_Analysis_Report.txt");
+};
+
+/* API: TEST AND IMPORT JSON */
+async function requestApi(){
+ const url=$("apiUrl").value.trim();if(!url)throw Error("Enter an API URL.");
+ const u=new URL(url);if(!["https:","http:"].includes(u.protocol))throw Error("Only HTTP/HTTPS endpoints are allowed.");
+ const headers={Accept:"application/json"},token=$("apiKey").value.trim();
+ if(token)headers.Authorization="Bearer "+token;
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),15000);
+ try{
+  const res=await fetch(u.href,{method:$("apiMethod").value,headers,signal:controller.signal});
+  if(!res.ok)throw Error("HTTP "+res.status+" response.");
+  return await res.json();
+ }finally{clearTimeout(timer);}
+}
+$("testApi").onclick=async()=>{
+ try{apiStatus("Connecting…");const j=await requestApi();apiStatus("Endpoint responded with JSON. "+(Array.isArray(j)?"Array of "+j.length+" items.":Array.isArray(j.features)?"GeoJSON with "+j.features.length+" features.":"Response received."),"ok");}
+ catch(e){apiStatus("API test failed: "+e.message+". Check CORS, URL, credentials and server permissions.","error");}
+};
+$("importApi").onclick=async()=>{
+ try{
+  apiStatus("Requesting JSON…");const j=await requestApi();
+  let fs=null,rows=null;
+  if(j?.type==="FeatureCollection"&&Array.isArray(j.features))fs=j.features.filter(f=>f.geometry);
+  else if(Array.isArray(j))rows=j;
+  else if(Array.isArray(j.records))rows=j.records;
+  else if(Array.isArray(j.data))rows=j.data;
+  else throw Error("Expected a GeoJSON FeatureCollection or an array of JSON records.");
+  if(fs){
+   S.geoOriginal={type:"FeatureCollection",features:fs};
+   S.all=fs.map(f=>({type:"Feature",geometry:f.geometry,properties:{...(f.properties||{})}}));
+   $("geoName").textContent="Imported API GeoJSON";$("geoInfo").textContent=fmt(fs.length)+" features";
+  }else{
+   if(!rows.length)throw Error("The returned record array is empty.");
+   S.csvRows=rows;S.csvHeaders=[...new Set(rows.flatMap(r=>Object.keys(r)))];
+   S.all=rows.map((r,i)=>({type:"Feature",geometry:null,properties:{...r,__rowNumber:i+1}}));
+   $("csvName").textContent="Imported API JSON";$("csvInfo").textContent=fmt(rows.length)+" records";
+  }
+  populateJoin();refresh("API data imported successfully.");apiStatus("JSON data imported into the dashboard.","ok");
+ }catch(e){apiStatus("Import failed: "+e.message,"error");}
+};
+$("loadWidget").onclick=()=>{
+ const url=$("widgetUrl").value.trim();
+ if(!url){apiStatus("Enter a widget URL first.","error");return;}
+ try{
+  const u=new URL(url);if(!["https:","http:"].includes(u.protocol))throw Error("Only HTTP/HTTPS URLs are allowed.");
+  $("widgetFrame").src=u.href;$("widgetSection").style.display=$("widgetToggle").checked?"":"none";
+  if(!$("widgetToggle").checked){$("widgetToggle").checked=true;$("widgetSection").style.display="";}
+  apiStatus("Widget URL loaded into the embedded frame. The provider may block embedding.","ok");
+ }catch(e){apiStatus("Widget URL error: "+e.message,"error");}
+};
+$("widgetToggle").addEventListener("change",()=>{$("widgetSection").style.display=$("widgetToggle").checked?"":"none";});
+
+/* DEMO DATA */
+function demo(){
+ const rows=[
+ {"LGA NAME":"Kanifing","DISTRICT NAME":"Kanifing","WARD NAME":"Bakau","EA CODE":"KMC001","BUSINESS ENTITY":"Bakau Market","BUSINESS COUNT":45,"EMPLOYEES":130,"ANNUAL SALES":250000},
+ {"LGA NAME":"Kanifing","DISTRICT NAME":"Kanifing","WARD NAME":"Bakau","EA CODE":"KMC002","BUSINESS ENTITY":"Bakau Retail Cluster","BUSINESS COUNT":32,"EMPLOYEES":74,"ANNUAL SALES":120000},
+ {"LGA NAME":"Banjul","DISTRICT NAME":"Banjul","WARD NAME":"Half Die","EA CODE":"BAN001","BUSINESS ENTITY":"Half Die Shops","BUSINESS COUNT":27,"EMPLOYEES":61,"ANNUAL SALES":98000},
+ {"LGA NAME":"Brikama","DISTRICT NAME":"Kombo Central","WARD NAME":"Brikama","EA CODE":"WCR001","BUSINESS ENTITY":"Brikama Trading Area","BUSINESS COUNT":63,"EMPLOYEES":158,"ANNUAL SALES":310000},
+ {"LGA NAME":"Brikama","DISTRICT NAME":"Kombo Central","WARD NAME":"Sukuta","EA CODE":"WCR002","BUSINESS ENTITY":"Sukuta Enterprise Cluster","BUSINESS COUNT":39,"EMPLOYEES":95,"ANNUAL SALES":165000},
+ {"LGA NAME":"Kerewan","DISTRICT NAME":"Lower Niumi","WARD NAME":"Essau","EA CODE":"NBR001","BUSINESS ENTITY":"Essau Business Centre","BUSINESS COUNT":18,"EMPLOYEES":36,"ANNUAL SALES":65000},
+ {"LGA NAME":"Mansakonko","DISTRICT NAME":"Kiang West","WARD NAME":"Jali","EA CODE":"LRR001","BUSINESS ENTITY":"Jali Enterprise Area","BUSINESS COUNT":14,"EMPLOYEES":25,"ANNUAL SALES":39000},
+ {"LGA NAME":"Janjanbureh","DISTRICT NAME":"Niani","WARD NAME":"Kuntaur","EA CODE":"CRR001","BUSINESS ENTITY":"Kuntaur Trading Area","BUSINESS COUNT":21,"EMPLOYEES":44,"ANNUAL SALES":73000},
+ {"LGA NAME":"Basse","DISTRICT NAME":"Fulladu East","WARD NAME":"Basse","EA CODE":"URR001","BUSINESS ENTITY":"Basse Market Cluster","BUSINESS COUNT":52,"EMPLOYEES":121,"ANNUAL SALES":215000},
+ {"LGA NAME":"Kanifing","DISTRICT NAME":"Kanifing","WARD NAME":"Serekunda","EA CODE":"KMC003","BUSINESS ENTITY":"Serekunda Enterprise Cluster","BUSINESS COUNT":76,"EMPLOYEES":204,"ANNUAL SALES":425000}
+ ];
+ const coords=[[-16.681,13.478],[-16.674,13.484],[-16.578,13.448],[-16.659,13.271],[-16.708,13.410],[-16.567,13.566],[-15.95,13.35],[-14.9,13.667],[-14.214,13.3],[-16.681,13.443]];
+ S.csvRows=rows;S.csvHeaders=Object.keys(rows[0]);
+ S.geoOriginal={type:"FeatureCollection",features:rows.map((r,i)=>({type:"Feature",geometry:{type:"Point",coordinates:coords[i]},properties:{"EA CODE":r["EA CODE"],"LGA NAME":r["LGA NAME"],"DISTRICT NAME":r["DISTRICT NAME"],"WARD NAME":r["WARD NAME"]}}))};
+ S.all=S.geoOriginal.features.map(f=>({...f,properties:{...f.properties}}));
+ $("csvName").textContent="Demonstration data";$("csvInfo").textContent="10 example records";
+ $("geoName").textContent="Demonstration GeoJSON";$("geoInfo").textContent="10 example points";
+ populateJoin();$("joinCsv").value="EA CODE";$("joinGeo").value="EA CODE";
+ $("joinBtn").click();map.setView([13.45,-16.58],8);
+}
+$("demoBtn").onclick=demo;
+
+/* CLEAR AND INITIAL STATE */
+$("clearAll").onclick=()=>{
+ S.csvRows=[];S.csvHeaders=[];S.geoOriginal=null;S.all=[];S.visible=[];S.page=0;
+ $("csvFile").value="";$("geoFile").value="";
+ $("csvName").textContent="No CSV loaded";$("csvInfo").textContent="";
+ $("geoName").textContent="No GeoJSON loaded";$("geoInfo").textContent="";
+ $("search").value="";
+ clearMap();refresh("All loaded data cleared.");map.setView([13.45,-16.58],8);
+};
+buildControls();S.visible=[];drawMap();analytics();renderTable();
+status("Ready. Load your CSV and GeoJSON or use the demonstration data.");
+</script>
+</body>
+</html>
